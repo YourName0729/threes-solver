@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include "board.h"
 #include "action.h"
 #include "weight.h"
@@ -174,4 +175,96 @@ public:
 
 private:
 	std::array<int, 4> opcode;
+};
+
+class left_down_alternaing_slider : public agent {
+public:
+	left_down_alternaing_slider(const std::string& args = "") : agent("name=slide role=slider " + args) {}
+
+	virtual action take_action(const board& before) {
+		go_left = !go_left;
+		if (go_left && can(before, left)) return action::slide(left);
+		if (can(before, down)) return action::slide(down);
+		if (can(before, up)) return action::slide(up);
+		if (can(before, right)) return action::slide(right);
+		return action();
+	}
+
+	bool can(const board& before, unsigned op) {
+		return board(before).slide(op) != -1;
+	}
+
+private:
+	bool go_left = 0;
+	const unsigned up = 0, right = 1, down = 2, left = 3;
+
+};
+
+class left_down_priority_slider : public agent {
+public:
+	left_down_priority_slider(const std::string& args = "") : agent("name=slide role=slider " + args) {}
+
+	virtual action take_action(const board& before) {
+		for (int i = 0; i < 4; ++i) {
+			unsigned op = pq[prv][i];
+			if (can(before, op)) {
+				prv = op;
+				return action::slide(op);
+			}
+		}
+		return action();
+	}
+
+	bool can(const board& before, unsigned op) {
+		return board(before).slide(op) != -1;
+	}
+
+private:
+	unsigned prv = 0;
+	const unsigned up = 0, right = 1, down = 2, left = 3;
+
+	const unsigned pq[4][4] = {
+		{down, left, up, right}, // up
+		{left, down, right, up}, // right
+		{left, down, up, right}, // down
+		{down, left, right, up} // left
+	};
+};
+
+class all_perm_slider : public agent {
+public:
+	all_perm_slider(const std::string& args = "") : agent("name=slide role=slider " + args) {
+		int rule = meta.count("rule")? meta["rule"] : 213774;
+		for (int i = 0; i < 4; ++i) {
+			for (int j = 0; j < rule % 24; ++j) {
+				std::next_permutation(pq[i], pq[i] + 4);
+			}
+			rule /= 24;
+		}
+	}
+
+	virtual action take_action(const board& before) {
+		for (int i = 0; i < 4; ++i) {
+			unsigned op = pq[prv][i];
+			if (can(before, op)) {
+				prv = op;
+				return action::slide(op);
+			}
+		}
+		return action();
+	}
+
+	bool can(const board& before, unsigned op) {
+		return board(before).slide(op) != -1;
+	}
+
+private:
+	unsigned prv = 0;
+	const unsigned up = 0, right = 1, down = 2, left = 3;
+	unsigned pq[4][4] = {
+		{0, 1, 2, 3},
+		{0, 1, 2, 3},
+		{0, 1, 2, 3},
+		{0, 1, 2, 3}
+	};
 };
