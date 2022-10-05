@@ -19,6 +19,7 @@ do
     score=$(./judge/threes-judge  --load stats.txt | tail -1 | cut -d " " -f 2)
     # echo score $score
     # echo $(echo "$score > $best_score" | bc)
+    echo $score >> anal.txt
     tput cuu1
     tput el
     if (($(echo "$score > $best_score" | bc) == 1))
