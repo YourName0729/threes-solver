@@ -13,18 +13,21 @@
 #include <string>
 #include "board.h"
 #include "action.h"
-#include "agent.h"
 #include "episode.h"
 #include "statistics.h"
+#include "agent_factory.h"
 
 int main(int argc, const char* argv[]) {
 	std::cout << "Threes! Demo: ";
 	std::copy(argv, argv + argc, std::ostream_iterator<const char*>(std::cout, " "));
 	std::cout << std::endl << std::endl;
 
+	// arguments
 	size_t total = 1000, block = 0, limit = 0;
 	std::string slide_args, place_args;
 	std::string load_path, save_path;
+	std::string slide_name;
+
 	for (int i = 1; i < argc; i++) {
 		std::string arg = argv[i];
 		auto match_arg = [&](std::string flag) -> bool {
@@ -41,6 +44,8 @@ int main(int argc, const char* argv[]) {
 			block = std::stoull(next_opt());
 		} else if (match_arg("limit")) {
 			limit = std::stoull(next_opt());
+		} else if (match_arg("slide_name") || match_arg("play_name")) {
+			slide_name = next_opt();
 		} else if (match_arg("slide") || match_arg("play")) {
 			slide_args = next_opt();
 		} else if (match_arg("place") || match_arg("env")) {
@@ -62,27 +67,30 @@ int main(int argc, const char* argv[]) {
 	}
 
 	// random_slider slide(slide_args);
-	all_perm_slider slide(slide_args);
+	// six_tuple_slider slide(slide_args);
+	auto slide = agent_factory::produce(slide_name, slide_args);
 	random_placer place(place_args);
 
+	// the for loop "total" times
 	while (!stats.is_finished()) {
 //		std::cerr << "======== Game " << stats.step() << " ========" << std::endl;
-		slide.open_episode("~:" + place.name());
-		place.open_episode(slide.name() + ":~");
+		slide->open_episode("~:" + place.name());
+		place.open_episode(slide->name() + ":~");
 
-		stats.open_episode(slide.name() + ":" + place.name());
+		stats.open_episode(slide->name() + ":" + place.name());
 		episode& game = stats.back();
+		// the main one game loop
 		while (true) {
-			agent& who = game.take_turns(slide, place);
+			agent& who = game.take_turns(*slide, place);
 			action move = who.take_action(game.state());
 //			std::cerr << game.state() << "#" << game.step() << " " << who.name() << ": " << move << std::endl;
 			if (game.apply_action(move) != true) break;
 			if (who.check_for_win(game.state())) break;
 		}
-		agent& win = game.last_turns(slide, place);
+		agent& win = game.last_turns(*slide, place);
 		stats.close_episode(win.name());
 
-		slide.close_episode(win.name());
+		slide->close_episode(win.name());
 		place.close_episode(win.name());
 	}
 

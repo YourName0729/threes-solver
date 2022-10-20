@@ -26,7 +26,7 @@
  */
 class board {
 public:
-	typedef uint32_t cell;
+	typedef uint32_t cell; // saves index, 0 for empty, 1, 2, 3, 4(6), 5(12)...
 	typedef std::array<cell, 4> row;
 	typedef std::array<row, 4> grid;
 	typedef uint64_t data;
@@ -59,10 +59,10 @@ private:
 	data info4(size_t i, data dat) { data old = info4(i); info(info() ^ ((old ^ dat) << (4 * i))); return old; }
 
 public:
-	static unsigned itot(unsigned i) { return i >= 3 ? 3 * (1 << (i - 3)) : i; }
-	static unsigned ttoi(unsigned t) { return t >= 3 ? std::log2(t / 3) + 3 : t; }
+	static unsigned itot(unsigned i) { return i >= 3 ? 3 * (1 << (i - 3)) : i; } // 0->0 1->1, 2->2, 3->3, 4->6, 5->12 etc
+	static unsigned ttoi(unsigned t) { return t >= 3 ? std::log2(t / 3) + 3 : t; } // 0->0 1->1, 2->2, 3->3, 6->4, 12->5 etc
 	static unsigned itov(unsigned i) { return ttov(itot(i)); }
-	static unsigned ttov(unsigned t) { return t >= 3 ? std::pow(3, std::log2(t / 3) + 1) : 0; }
+	static unsigned ttov(unsigned t) { return t >= 3 ? std::pow(3, std::log2(t / 3) + 1) : 0; } // value of a tile
 
 	cell hint() const { return info4(0); }
 	cell hint(cell t) { return info4(0, t); }
@@ -207,6 +207,43 @@ public:
 			for (int c = r + 1; c < 4; c++) {
 				std::swap(tile[r][c], tile[c][r]);
 			}
+		}
+	}
+
+	void anti_transpose() {
+		for (int r = 0; r < 4; ++r) {
+			for (int c = 0; c < 3 - r; ++c) {
+				std::swap(tile[r][c], tile[3 - c][3 - r]);
+			}
+		}
+	}
+
+// helper
+public: 
+	static board index_board() {
+		board re;
+		for (int i = 0; i < 16; ++i) {
+			re(i) = i;
+		}
+		return re;
+	}
+
+	cell max() const {
+		cell mx = 0;
+		for (int r = 0; r < 4; ++r) {
+			for (int c = 0; c < 4; ++c) {
+				mx = std::max(mx, tile[r][c]);
+			}
+		}
+		return mx;
+	}
+
+	void show() const {
+		for (int r = 0; r < 4; ++r) {
+			for (int c = 0; c < 4; ++c) {
+				std::cout << tile[r][c] << ' ';
+			}
+			std::cout << '\n';
 		}
 	}
 

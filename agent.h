@@ -61,6 +61,8 @@ public:
 	random_agent(const std::string& args = "") : agent(args) {
 		if (meta.find("seed") != meta.end())
 			engine.seed(int(meta["seed"]));
+		else
+			engine.seed(std::random_device()());
 	}
 	virtual ~random_agent() {}
 
@@ -95,6 +97,7 @@ protected:
 		for (size_t size; in >> size; net.emplace_back(size));
 	}
 	virtual void load_weights(const std::string& path) {
+		// std::cout << "load weight\n";
 		std::ifstream in(path, std::ios::in | std::ios::binary);
 		if (!in.is_open()) std::exit(-1);
 		uint32_t size;
@@ -102,19 +105,178 @@ protected:
 		net.resize(size);
 		for (weight& w : net) in >> w;
 		in.close();
+		// std::cout << "load weight check\n";
+		// for (auto& wei : net) {
+		// 	wei.check();
+		// }
 	}
 	virtual void save_weights(const std::string& path) {
+		// std::cout << "save weight\n";
 		std::ofstream out(path, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!out.is_open()) std::exit(-1);
 		uint32_t size = net.size();
 		out.write(reinterpret_cast<char*>(&size), sizeof(size));
 		for (weight& w : net) out << w;
 		out.close();
+		// std::cout << "save weight check\n";
+		// for (auto& wei : net) {
+		// 	wei.check();
+		// }
+	}
+
+public:
+	weight::type get_potential(const board& brd) const {
+		weight::type val = 0;
+		for (const auto& wei : net) {
+			val += wei.get_weight(brd);
+		}
+		return val;
+	}
+
+	void update(const board& brd, weight::type err) {
+		// std::cout << "overall err is " << err << '\n';
+		weight::type nerr = err / static_cast<weight::type>(net.size());
+		for (auto& wei : net) {
+			// if (nerr != 0)
+			// 	std::cout << "wei.update " << nerr << '\n';
+			wei.update(brd, nerr);
+		}
 	}
 
 protected:
 	std::vector<weight> net;
 	float alpha;
+};
+
+class n_tuple_slider : public weight_agent {
+public:
+	n_tuple_slider(const std::vector<weight::pattern>& pats, const std::string& args = "") : weight_agent(args + " name=n_tuple_slider role=player") {
+		// std::cout << "n_tuple_slider constructor\n";
+		if (net.size()) {
+			// std::cout << "only set pattern\n";
+			for (unsigned int i = 0; i < net.size(); ++i) {
+				net[i].set_pattern(pats[i]);
+			}
+		}
+		else {
+			// std::cout << "init new weight\n";
+			for (const auto& pat : pats) {
+				net.push_back(weight(pat));
+			}	
+		}
+		// std::cout << "n_tuple const check\n";
+		// for (auto& wei : net) {
+		// 	wei.check();
+		// }
+	}
+
+	virtual void close_episode(const std::string& flag = "") override {
+		if (meta.find("learn") != meta.end() && property("learn") == "no_learn") {
+			stats.clear();
+			return;
+		}
+		learn();
+	}
+
+	virtual action take_action(const board& before) override {
+		// std::cout << "net size " << net.size() << '\n';
+		// for (auto& wei : net) {
+		// 	wei.check();
+		// }
+		weight::type best_value = -1e9;
+		char best_drct = 5;
+
+		// std::cout << "take action\n";
+
+		stats.push_back({board(), 0, 0});
+		for (int i = 0; i < 4; ++i) {
+			board after = board(before);
+			board::reward rew = after.slide(i);
+			if (rew == -1) continue;
+			weight::type pot = get_potential(after);
+			// std::cout << "drct " << i << " reward " << rew << " pot " << pot << '\n';
+			if (best_drct == 5 || pot + rew > best_value) {
+				// std::cout << "new best " << pot << ' ' << rew << '\n';
+				best_value = pot + rew, best_drct = i;
+				stats.back() = {after, pot, rew};
+			}
+		}
+		// std::cout << "best si drct " << best_drct << " with value " << best_value << '\n';
+
+		// no valid move
+		if (best_drct == 5) {
+			return action();
+		}
+		// std::cout << "best is " << (int)best_drct << '\n';
+		return action::slide(best_drct);
+	}
+
+	void learn() {
+		// if (stats[stats.size() - 2].after.max() <= 3) {
+		// 	std::cout << "bad??\n";
+		// 	for (auto& st : stats) {
+		// 		st.after.show();
+		// 		std::cout << '\n';
+		// 	}
+		// }
+		weight::type new_pot = 0;
+		for (stats.pop_back(); stats.size(); stats.pop_back()) {
+			
+			auto& cur = stats.back();
+			// std::cout << get_potential(cur.after) << '\t';
+			// if (new_pot != 0)
+			// std::cout << new_pot << '\t';
+			// std::cout << "the diff is " << new_pot - cur.pot << '\n';
+			// if (new_pot - cur.pot > 0) {
+			// 	std::cout << " + \t";
+			// }
+			// else {
+			// 	std::cout << " - \t";
+			// }
+			update(cur.after, alpha * (new_pot - cur.pot));
+			new_pot = cur.rew + get_potential(cur.after);
+			// std::cout << get_potential(cur.after) << '\n';
+		}
+	}
+
+protected:
+	struct stat {
+		board after;
+		weight::type pot;
+		board::reward rew;
+	};
+
+	std::vector<stat> stats;
+};
+
+class four_tuple_slider : public n_tuple_slider {
+public:
+	four_tuple_slider(const std::string& args = "") : n_tuple_slider({
+		{0, 1, 2, 3},
+		{4, 5, 6, 7}
+	}, args + " name=four_tuple_slider") {}
+};
+
+class six_tuple_slider : public n_tuple_slider {
+public:
+	six_tuple_slider(const std::string& args = "") : n_tuple_slider({
+		{0, 1, 2, 3, 4, 5},
+		{4, 5, 6, 7, 8, 9},
+		{0, 1, 2, 4, 5, 6},
+		{4, 5, 6, 8, 9, 10}
+	}, args + " name=six_tuple_slider") {}
+};
+
+class best_six_tuple_slider : public n_tuple_slider {
+public:
+	best_six_tuple_slider(const std::string& args = "") : n_tuple_slider({
+		{0, 1, 2, 3, 4, 5},
+		{4, 5, 6, 7, 8, 9},
+		{0, 1, 2, 4, 5, 6},
+		{0, 1, 5, 6, 7, 10},
+		{0, 1, 2, 5, 9, 10},
+		{0, 1, 5, 9, 13, 14}
+	}, args + " name=best_six_tuple_slider") {}
 };
 
 /**

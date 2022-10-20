@@ -45,3 +45,18 @@
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# Data or Configuration
+
+threes
+stats.txt
+
+
+# logs
+
+log
+*.log
+*.txt
+*.png
+*.pdf
+# *.bin
