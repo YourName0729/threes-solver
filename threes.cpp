@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <chrono>
 #include "board.h"
 #include "action.h"
 #include "episode.h"
@@ -72,6 +73,8 @@ int main(int argc, const char* argv[]) {
 	random_placer place(place_args);
 
 	// the for loop "total" times
+	// long long cnt = 0;
+	// auto begin = std::chrono::steady_clock::now();
 	while (!stats.is_finished()) {
 //		std::cerr << "======== Game " << stats.step() << " ========" << std::endl;
 		slide->open_episode("~:" + place.name());
@@ -82,6 +85,7 @@ int main(int argc, const char* argv[]) {
 		// the main one game loop
 		while (true) {
 			agent& who = game.take_turns(*slide, place);
+			// ++cnt;
 			action move = who.take_action(game.state());
 //			std::cerr << game.state() << "#" << game.step() << " " << who.name() << ": " << move << std::endl;
 			if (game.apply_action(move) != true) break;
@@ -99,6 +103,9 @@ int main(int argc, const char* argv[]) {
 		out << stats;
 		out.close();
 	}
+
+	// auto end = std::chrono::steady_clock::now();
+	// std::cout << cnt / 2 << " moves in " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << " seconds\n";
 
 	return 0;
 }

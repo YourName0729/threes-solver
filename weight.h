@@ -28,6 +28,9 @@ public:
 		value.resize(1 << (vec.size() << 2));
 		std::fill(value.begin(), value.end(), 0.0);
 	}
+	weight(const std::vector<board::cell>& vec, weight::type v_init) : weight(vec) {
+		std::fill(value.begin(), value.end(), v_init);
+	}
 
 	void check() {
 		auto it = std::max_element(value.begin(), value.end());

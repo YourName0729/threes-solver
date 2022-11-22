@@ -1,0 +1,1 @@
+./threes --total=1 --slide_name=td_lambda --slide="save=td_lamb2.bin"

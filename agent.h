@@ -75,7 +75,7 @@ protected:
  */
 class weight_agent : public agent {
 public:
-	weight_agent(const std::string& args = "") : agent(args), alpha(0) {
+	weight_agent(const std::string& args = "") : agent(args), alpha(0.01) {
 		if (meta.find("init") != meta.end())
 			init_weights(meta["init"]);
 		if (meta.find("load") != meta.end())
@@ -277,6 +277,20 @@ public:
 		{0, 1, 2, 5, 9, 10},
 		{0, 1, 5, 9, 13, 14}
 	}, args + " name=best_six_tuple_slider") {}
+};
+
+class best_eight_tuple_slider : public n_tuple_slider {
+public:
+	best_eight_tuple_slider(const std::string& args = "") : n_tuple_slider({
+		{0, 1, 2, 3, 4, 5},
+		{4, 5, 6, 7, 8, 9},
+		{0, 1, 2, 4, 5, 6},
+		{0, 1, 5, 6, 7, 10},
+		{0, 1, 2, 5, 9, 10},
+		{0, 1, 5, 9, 13, 14},
+		{0, 1, 5, 8, 9, 13},
+		{0, 1, 2, 4, 6, 10}
+	}, args + " name=best_eight_tuple_slider") {}
 };
 
 /**

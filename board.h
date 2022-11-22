@@ -108,7 +108,7 @@ public:
 	 */
 	reward place(unsigned pos, cell tile, cell hint_tile) {
 		data bak = info();
-		if (pos >= 16 || operator()(pos)) return -1;
+		if (pos >= 16 || operator()(pos)) return -1; // the position is out-of-range or occupied
 		if (hint() == 0 && !extract_hint_from_bag(tile)) return -1;
 		if (hint() != tile) return info(bak), -1;
 		if (!extract_hint_from_bag(hint_tile)) return info(bak), -1;
@@ -122,6 +122,7 @@ public:
 	 * return the reward of the action, or -1 if the action is illegal
 	 */
 	reward slide(unsigned opcode) {
+		// std::cout << "board slide\n";
 		reward r = -1;
 		switch (opcode & 0b11) {
 		case 0: r = slide_up(); break;

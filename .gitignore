@@ -60,3 +60,7 @@ log
 *.png
 *.pdf
 # *.bin
+
+stats.txt
+*.bin
+.vscode
